@@ -28,11 +28,76 @@
 // Adafruit_NeoPixel pixels(NUMPIXELS, PINLED, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PINLED, NEO_GRB + NEO_KHZ800);
 
-// Sensor MPU6050
+////////////////////////////////////////////////////////////////////////////////
+// MPU6050 Sensor Lib Variablen
+
 #include "Wire.h"
 #include <MPU6050_light.h>
 
+MPU6050 mpu(Wire);
 
+// MPU Sensor => Variablen
+
+float AverageX = 0;
+float AverageY = 0;
+float AverageZ = 0;
+int AverageRange = 10;
+long timer = 0;
+int WinkelInputLatenz = 10;
+
+////////////////////////////////////////////////////////////////////////////////
+// MPU6050 Sensor Funktionen
+
+void winkelmessen() { // Winkelmessen und Runden
+    mpu.update(); // Update Info
+  
+  if((millis()-timer)>WinkelInputLatenz){ // print data every ms
+	
+    //////////////////////
+    // X Rotation
+    Serial.print("X : ");
+	Serial.print(mpu.getAngleX());
+
+    AverageX = SmoothingInput(mpu.getAngleX(),AverageX);
+    Serial.print("X Smoothing :"AverageX);
+	
+    //////////////////////
+    // Y Rotation
+    Serial.print("\tY : ");
+	Serial.print(mpu.getAngleY());
+
+    AverageX = SmoothingInput(mpu.getAngleX(),AverageX);
+    Serial.print("X Smoothing :"AverageX);
+
+    //////////////////////
+    // Z Rotation
+	Serial.print("\tZ : ");
+	Serial.println(mpu.getAngleZ());
+
+    AverageX = SmoothingInput(mpu.getAngleX(),AverageX);
+    Serial.print("X Smoothing :"AverageX);
+
+	timer = millis();  
+  }
+}
+
+void MPU6050thisIsFlat(){
+    Serial.println(F("Calculating gyro offset, do not move MPU6050"));
+    delay(1000);
+    mpu.calcGyroOffsets();
+    Serial.println("Done!\n");
+}
+
+void MPU6050Setup(){
+    Wire.begin();
+    mpu.begin();
+}
+
+// Int und Float Problem
+float SmoothingInput(float input, float AverageValue){
+    float SmoothingOut = (( (float) AverageRange * (float) AverageValue) + (float) input)/( (float) AverageRange+1);
+    return SmoothingOut;
+}
 
 
 ESP8266WiFiMulti WiFiMulti;
@@ -200,16 +265,4 @@ int AngularMap(float Winkel){
 
 }
 
-void winkelmessen() {
-  mpu.update();
-  
-  if((millis()-timer)>10){ // print data every 10ms
-	Serial.print("X : ");
-	Serial.print(mpu.getAngleX());
-	Serial.print("\tY : ");
-	Serial.print(mpu.getAngleY());
-	Serial.print("\tZ : ");
-	Serial.println(mpu.getAngleZ());
-	timer = millis();  
-  }
-}
+
