@@ -29,7 +29,9 @@ DMP Digital Motion Processor
 - Es stabelesiert die Werte
 - Kalibriert die Werte
 
-Die MPU6050_light 📕LIB basiert auf der [MPU6050_tockn](https://github.com/Titibo26/MPU6050_tockn) 📕LIB aus den Unterschieden mit der [Adafruit_MPU6050](https://github.com/adafruit/Adafruit_MPU6050) 📕LIB kann ich ohne Ahnung zu haben funktion Rückleiden.
+Die MPU6050_light 📕LIB basiert auf der [MPU6050_tockn](https://github.com/Titibo26/MPU6050_tockn) 📕LIB aus den Unterschieden mit der [Adafruit_MPU6050](https://github.com/adafruit/Adafruit_MPU6050) 📕LIB sind eine gute Vorlage.
+
+**Experiment:** 
 
 **Filter:** Der Sensor misst mehrfach alle Position und nimmt den durchschnitt mit den DMP. Wen man aber nur den Gyro als Referenz nimmt funktioniert das nur über kurze Zeit. Jeder Messpunkt den man addiert bringt ungenauigkeit ins System wo der Ausgangspunkt ist von den Orientierungssystem weil sich jede Messungenaugikeit überträgt.
 
@@ -123,6 +125,8 @@ MPU6050_BAND_5_HZ,   ///< 5 Hz
 ```
 
 ---
+
+
 
 ### 🔨 Funktion
 
