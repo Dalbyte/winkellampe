@@ -157,3 +157,8 @@ Quelle: [adafruit-neopixel-uberguide](https://cdn-learn.adafruit.com/downloads/p
 ![LedFunktion](img/LedFunktion.jpg)
 
 ![LedFunktion2](img/LedFunktion2.jpg)
+
+```javascript
+
+let test = "ko";
+```
