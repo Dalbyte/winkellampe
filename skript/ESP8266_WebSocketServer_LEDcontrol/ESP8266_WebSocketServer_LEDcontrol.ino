@@ -1,44 +1,23 @@
 /****************************************************************************************************************************
-  ESP8266_WebSocketServer_LEDcontrol.ino
-  For ESP8266
-
   Based on and modified from WebSockets libarary https://github.com/Links2004/arduinoWebSockets
-  to support other boards such as  SAMD21, SAMD51, Adafruit's nRF52 boards, etc.
-
   Built by Khoi Hoang https://github.com/khoih-prog/WebSockets_Generic
   Licensed under MIT license
-
-  Originally Created on: 26.11.2015
-  Original Author: Markus Sattler
-
-  Version: 2.3.1
-
-  Version Modified By   Date      Comments
-  ------- -----------  ---------- -----------
-  2.1.3   K Hoang      15/05/2020 Initial porting to support SAMD21, SAMD51, nRF52 boards, such as AdaFruit Feather nRF52832,
-                                  nRF52840 Express, BlueFruit Sense, Itsy-Bitsy nRF52840 Express, Metro nRF52840 Express, etc.
-  2.2.1   K Hoang      18/05/2020 Bump up to sync with v2.2.1 of original WebSockets library
-  2.2.2   K Hoang      25/05/2020 Add support to Teensy, SAM DUE and STM32. Enable WebSocket Server for new supported boards.
-  2.2.3   K Hoang      02/08/2020 Add support to W5x00's Ethernet2, Ethernet3, EthernetLarge Libraries. 
-                                  Add support to STM32F/L/H/G/WB/MP1 and Seeeduino SAMD21/SAMD51 boards.
-  2.3.1   K Hoang      07/10/2020 Sync with v2.3.1 of original WebSockets library. Add ENC28J60 EthernetENC library support
 *****************************************************************************************************************************/
 
-#if !defined(ESP8266)
-  #error This code is intended to run only on the ESP8266 boards ! Please check your Tools->Board setting.
-#endif
+// WLAN WEBSOCKET
 
 #define _WEBSOCKETS_LOGLEVEL_     3
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
-
 #include <WebSocketsServer_Generic.h>
-
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <Hash.h>
 
+///////////////////////////
+///Data Packet
+#include <ArduinoJson.h>
 
 ///////////////////////////
 ///LedLib
@@ -47,26 +26,27 @@
 #ifdef __AVR__
  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
+//////////////////////////////////////////////////////
 
 ///////////////////////////
 ////// LED
 
-// Which pin on the Arduino is connected to the NeoPixels?
-// On a Trinket or Gemma we suggest changing this to 1:
+// Which Pin NeoPixels
 #define LED_PIN     0
 
 // How many NeoPixels are attached to the Arduino?
-#define LED_COUNT  144
+#define LED_COUNT  12 // Ledring Test
+// #define LED_COUNT  144 // LedStrip
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
 
+//////////////////////////////////////////////////////
 
-// #define LED_RED     15
-// #define LED_GREEN   12
-// #define LED_BLUE    13
+
+///////////////////////////
+////// WLAN Setup
 
 ESP8266WiFiMulti WiFiMulti;
-
 IPAddress static_ip(192,168,2,105);
 IPAddress static_gw(192,168,2,1);
 IPAddress static_sn(192,168,2,1);
@@ -95,19 +75,22 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     case WStype_TEXT:
       Serial.printf("[%u] get Text: %s\n", num, payload);
 
+      CharToJson(payload);
+      Serial.println("Rot: " + docRead["R"]);
+      Serial.println("Gruen: " + docRead["G"]);
+      Serial.println("Blau: " + docRead["B"]);
+      Serial.println("White: " + docRead["W"]);
+      
       if (payload[0] == '#')
       {
         // we get RGB data
 
-        // decode rgb data
+        // decode rgb data Hex Convert
         // uint32_t rgb = (uint32_t) strtol((const char *) &payload[1], NULL, 16);
         uint32_t rgb = (uint32_t) strtol((const char *) &payload[1], NULL, 16);
         
         strip.fill(rgb,0,LED_COUNT-1);
         strip.show();
-        // analogWrite(LED_RED,    ((rgb >> 16) & 0xFF));
-        // analogWrite(LED_GREEN,  ((rgb >> 8) & 0xFF));
-        // analogWrite(LED_BLUE,   ((rgb >> 0) & 0xFF));
       }
       break;
 
@@ -118,23 +101,8 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 
 void setup()
 {
-
-
-  
-  // pinMode(LED_RED, OUTPUT);
-  // pinMode(LED_GREEN, OUTPUT);
-  // pinMode(LED_BLUE, OUTPUT);
-
-  // digitalWrite(LED_RED, 1);
-  // digitalWrite(LED_GREEN, 1);
-  // digitalWrite(LED_BLUE, 1);
-  
-  // Serial.begin(921600);
   Serial.begin(115200);
-
   Serial.println("\nStart ESP8266_WebSocketServer on " + String(ARDUINO_BOARD));
-
-  //Serial.setDebugOutput(true);
 
   for (uint8_t t = 4; t > 0; t--)
   {
@@ -143,11 +111,11 @@ void setup()
     delay(1000);
   }
 
-  //WiFi.config(static_ip, static_gw, static_sn);
-  
-  WiFiMulti.addAP("halle", "HallegutAllesgut!");
+  // WiFi.config(static_ip, static_gw, static_sn);
+  // WiFiMulti.addAP("halle", "HallegutAllesgut!");
+  WiFiMulti.addAP("Beesemaise", "iGalaniapice");
 
-  //WiFi.disconnect();
+  // WiFi.disconnect();
   while (WiFiMulti.run() != WL_CONNECTED)
   {
     Serial.print(".");
@@ -169,7 +137,7 @@ void setup()
   server.on("/", []()
   {
     // send index.html
-    server.send(200, "text/html", "<html><head> <script>var connection=new WebSocket("ws://"+location.hostname+":81/",["arduino"]);connection.onopen=function(){connection.send("Connect "+new Date());};connection.onerror=function(error){console.log("WebSocket Error ",error);};connection.onmessage=function(e){console.log("Server: ",e.data);};function sendRGB(){var r=parseInt(document.getElementById("r").value).toString(16);var g=parseInt(document.getElementById("g").value).toString(16);var b=parseInt(document.getElementById("b").value).toString(16);var w=parseInt(document.getElementById("w").value).toString(16);if(r.length<2){r="0"+r;} if(g.length<2){g="0"+g;} if(b.length<2){b="0"+b;} if(w.length<2){w="0"+w;} var rgb="#"+r+g+b+w;console.log("RGB: "+rgb);connection.send(rgb);}</script> </head><body> LED Control:<br /> <br /> R: <input id="r" type="range" min="0" max="255" step="1" oninput="sendRGB();" /><br /> G: <input id="g" type="range" min="0" max="255" step="1" oninput="sendRGB();" /><br /> B: <input id="b" type="range" min="0" max="255" step="1" oninput="sendRGB();" /><br /> B: <input id="w" type="range" min="0" max="255" step="1" oninput="sendRGB();" /><br /></body></html>");
+    server.send(200, "text/html", "<html><head><script>var connection = new WebSocket('ws://'+location.hostname+':81/', ['arduino']); connection.onopen = function () {  connection.send('Connect ' + new Date()); }; connection.onerror = function (error) {    console.log('WebSocket Error ', error);};connection.onmessage = function (e) {  console.log('Server: ', e.data);};function sendRGB() {  var r = parseInt(document.getElementById('r').value).toString(16);  var g = parseInt(document.getElementById('g').value).toString(16);  var b = parseInt(document.getElementById('b').value).toString(16);  if(r.length < 2) { r = '0' + r; }   if(g.length < 2) { g = '0' + g; }   if(b.length < 2) { b = '0' + b; }   var rgb = '#'+r+g+b;    console.log('RGB: ' + rgb); connection.send(rgb); }</script></head><body>LED Control:<br/><br/>R: <input id=\"r\" type=\"range\" min=\"0\" max=\"255\" step=\"1\" oninput=\"sendRGB();\" /><br/>G: <input id=\"g\" type=\"range\" min=\"0\" max=\"255\" step=\"1\" oninput=\"sendRGB();\" /><br/>B: <input id=\"b\" type=\"range\" min=\"0\" max=\"255\" step=\"1\" oninput=\"sendRGB();\" /><br/></body></html>");
   });
 
   server.begin();
@@ -178,25 +146,31 @@ void setup()
   MDNS.addService("http", "tcp", 80);
   MDNS.addService("ws", "tcp", 81);
 
-  //digitalWrite(LED_RED, 0);
-  //digitalWrite(LED_GREEN, 0);
-  //digitalWrite(LED_BLUE, 0);
-
   // server address, port and URL
   Serial.print("WebSockets Server started @ IP address: ");
   Serial.println(WiFi.localIP());
 
   strip.begin();
+
+  // Daten Variablen
+  StaticJsonDocument<200> docRead;
+
+
+
+  
 }
+
+///////////////////////////
+/// Standart Funktion
 
 void heartBeatPrint(void)
 {
   static int num = 1;
 
   if (WiFi.status() == WL_CONNECTED)
-    Serial.print("H");        // H means connected to WiFi
+    Serial.print("Connected to WiFi");        // H means connected to WiFi
   else
-    Serial.print("F");        // F means not connected to WiFi
+    Serial.print("Not Connected to WiFi");        // F means not connected to WiFi
 
   if (num == 80)
   {
@@ -223,9 +197,19 @@ void check_status()
   }
 }
 
+
+///////////////////////////
+///Loop
+
 void loop()
 {
   check_status();
   webSocket.loop();
   server.handleClient();
 }
+
+void CharToJson(char json[]){
+      // Deserialize the JSON document
+      DeserializationError error = deserializeJson(docRead, json);
+  
+  }

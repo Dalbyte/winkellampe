@@ -1,0 +1,144 @@
+<html>
+    <head>
+        <!--ColorPickerLink-->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css" />
+        <!--Font-->
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;300&display=swap" rel="stylesheet">
+        
+        
+        <style>
+            body {  background-color: #fff;
+
+            }
+            h1 {
+                color : #000;
+                font-family: 'Montserrat', sans-serif;
+                transform: rotate(30deg);
+                text-align: center;
+                font-size: 25vw;
+            }
+            h2 {
+                color : #000;
+                font-family: 'Montserrat', sans-serif;
+                transform: rotate(-30deg);
+                text-align: center;
+                font-size: 25vw;
+            }
+        
+            .head {
+                float: center;
+                height: 10hw;
+                padding: 0 px;
+                border: 0.4vw solid #000;
+            }
+            .headline {
+                float: center;
+                height: 50hw;
+                padding: 0 px;
+                border: 0.4vw solid #000;
+            }
+        </style>
+        <script>
+            //var connection = new WebSocket("ws://" + location.hostname + ":81/", ["arduino"]);
+            var connection = new WebSocket("ws://" + "192.168.178.196" + ":81/", ["arduino"]);
+            connection.onopen = function () {
+                connection.send("Connect " + new Date());
+            };
+            connection.onerror = function (error) {
+                console.log("WebSocket Error ", error);
+            };
+            connection.onmessage = function (e) {
+                console.log("Server: ", e.data);
+            };
+            
+        </script>
+        
+
+    </head>
+    <body>
+        <div id="head" class="head"></div>
+        <div id="headline" class="headline">
+            <h1>Winkel</h1>
+            <h2>Lampe</h2>
+        </div>
+        <div id="color" class="color"></div>
+
+        
+        <div class="pickr-container"><div class="color-picker"></div></div>
+        <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+        <script>
+            // Farbpicker
+            
+            var RGBW = {
+                R : 0,
+                G : 0,
+                B : 0,
+                W : 0
+            };
+            
+            // Configuration Farbpicker
+            const pickr = Pickr.create({
+                el: ".color-picker",
+                theme: "classic", // or 'monolith', or 'nano'
+                default: '#fff',
+                    // Where the pickr-app should be added as child.
+                container: 'body',
+                position: 'top-middle',
+                showAlways: true, // Auswahlfeld
+                useAsButton: true,
+                
+                // Farbfelder
+                /*
+                swatches: [
+                    "rgba(244, 67, 54, 1)",
+                    "rgba(233, 30, 99, 1)",
+                    "rgba(156, 39, 176, 1)",
+                    "rgba(103, 58, 183, 1)"
+                ],*/
+                
+                
+                // Interface Elemente
+                components: {
+                    preview: false,
+                    opacity: true,
+                    hue: true,
+                    interaction: {
+                        rgba: true,
+                        hex: true,
+                        input: true
+                    },
+                },
+            });
+            
+            pickr.on("change", (color, instance) => {
+                
+                    // LOG
+                    /*
+                    console.log(color.toRGBA());
+                    console.log(Math.round(color.h));
+                    console.log(color.toRGBA().toString(0));
+                    console.log(Math.round(color.toRGBA()[0]));
+                    console.log(Math.round(color.toRGBA()[1]));
+                    console.log(Math.round(color.toRGBA()[2]));
+                    console.log(Math.round(color.toRGBA()[3]*255)); // Alpha 0-1 Normal
+                    */
+                    
+                    // Farbpicker
+                    RGBW.R = Math.round(color.toRGBA()[0]);
+                    RGBW.G = Math.round(color.toRGBA()[1]);
+                    RGBW.B = Math.round(color.toRGBA()[2]);
+                    RGBW.W = Math.round(color.toRGBA()[3]*255);
+                    
+                    var RGBWjson = JSON.stringify(RGBW);
+                    
+                    console.log(RGBWjson);
+                
+                    // BackgroundColor
+                    document.body.style.backgroundColor = color.toHEXA();
+                    
+                    // Senden
+                    connection.send(RGBWjson);
+                })
+        </script>
+    </body>
+</html>
