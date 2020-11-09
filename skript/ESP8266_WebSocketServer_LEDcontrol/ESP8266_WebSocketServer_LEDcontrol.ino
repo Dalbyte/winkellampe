@@ -19,6 +19,8 @@
 ///Data Packet
 #include <ArduinoJson.h>
 
+DynamicJsonDocument doc(300);
+
 ///////////////////////////
 ///LedLib
 
@@ -75,11 +77,15 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
     case WStype_TEXT:
       Serial.printf("[%u] get Text: %s\n", num, payload);
 
-      CharToJson(payload);
-      Serial.println("Rot: " + docRead["R"]);
-      Serial.println("Gruen: " + docRead["G"]);
-      Serial.println("Blau: " + docRead["B"]);
-      Serial.println("White: " + docRead["W"]);
+      DeserializationError error = deserializeJson(doc,(char*)payload);
+      //JsonObject obj = doc.as<JsonObject>();
+
+      //Serial.println("Rot: " + obj[String("R")]);
+      int R = doc["R"];
+      //Serial.println("Rot: " + doc["R"]);
+      //Serial.println("Gruen: " + doc["G"]);
+      //Serial.println("Blau: " + doc["B"]);
+      //Serial.println("White: " + doc["W"]);
       
       if (payload[0] == '#')
       {
@@ -100,7 +106,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 }
 
 void setup()
-{
+{ 
   Serial.begin(115200);
   Serial.println("\nStart ESP8266_WebSocketServer on " + String(ARDUINO_BOARD));
 
@@ -152,8 +158,7 @@ void setup()
 
   strip.begin();
 
-  // Daten Variablen
-  StaticJsonDocument<200> docRead;
+
 
 
 
@@ -207,9 +212,3 @@ void loop()
   webSocket.loop();
   server.handleClient();
 }
-
-void CharToJson(char json[]){
-      // Deserialize the JSON document
-      DeserializationError error = deserializeJson(docRead, json);
-  
-  }
