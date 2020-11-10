@@ -1,9 +1,3 @@
-/****************************************************************************************************************************
-  Based on and modified from WebSockets libarary https://github.com/Links2004/arduinoWebSockets
-  Built by Khoi Hoang https://github.com/khoih-prog/WebSockets_Generic
-  Licensed under MIT license
-*****************************************************************************************************************************/
-
 // WLAN WEBSOCKET
 
 #define _WEBSOCKETS_LOGLEVEL_     3
@@ -15,11 +9,14 @@
 #include <ESP8266mDNS.h>
 #include <Hash.h>
 
+
 ///////////////////////////
 ///Data Packet
-#include <ArduinoJson.h>
 
-DynamicJsonDocument doc(300);
+#include <ArduinoJson.h>
+StaticJsonDocument<300> SocketDataJSON;
+
+
 
 ///////////////////////////
 ///LedLib
@@ -40,7 +37,18 @@ DynamicJsonDocument doc(300);
 #define LED_COUNT  12 // Ledring Test
 // #define LED_COUNT  144 // LedStrip
 
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
+//Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGBW + NEO_KHZ800);
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+// Farbwerte
+int Rot = 0;
+int Gruen = 0;
+int Blau = 0;
+int Weis = 0;
+
+// RGB vs RGBW
+// uint32_t AktiveFarbe = strip.Color(0,0,0,0);
+uint32_t AktiveFarbe = strip.Color(0,0,0);
 
 //////////////////////////////////////////////////////
 
@@ -49,6 +57,8 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
 ////// WLAN Setup
 
 ESP8266WiFiMulti WiFiMulti;
+
+// Static IP funktion läuft noch nicht
 IPAddress static_ip(192,168,2,105);
 IPAddress static_gw(192,168,2,1);
 IPAddress static_sn(192,168,2,1);
@@ -75,39 +85,55 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       break;
       
     case WStype_TEXT:
-      Serial.printf("[%u] get Text: %s\n", num, payload);
+    {
+      // Serial.printf("[%u] get Text: %s\n", num, payload); // Printet Serial den Orginal empfangen Text
 
-      DeserializationError error = deserializeJson(doc,(char*)payload);
-      //JsonObject obj = doc.as<JsonObject>();
+      // Read Data 
+      deserializeJson(SocketDataJSON,(char*)payload);
+      Rot = SocketDataJSON["R"];
+      Gruen = SocketDataJSON["G"];
+      Blau = SocketDataJSON["B"];
+      Weis = SocketDataJSON["W"];
 
-      //Serial.println("Rot: " + obj[String("R")]);
-      int R = doc["R"];
-      //Serial.println("Rot: " + doc["R"]);
-      //Serial.println("Gruen: " + doc["G"]);
-      //Serial.println("Blau: " + doc["B"]);
-      //Serial.println("White: " + doc["W"]);
+      // RGB vs RGBW
+      // AktiveFarbe = strip.Color(Rot,Gruen,Blau,Weis);
+      AktiveFarbe = strip.Color(Rot,Gruen,Blau);
+      Serial.println(AktiveFarbe);
+
+
+      // Show JSON Data GRB
+      serializeJsonPretty(SocketDataJSON, Serial);
+      //serializeJson(SocketDataJSON, Serial); // unformatiert
       
-      if (payload[0] == '#')
-      {
-        // we get RGB data
+      
+      strip.fill(AktiveFarbe,0,LED_COUNT);
+      strip.show();
 
-        // decode rgb data Hex Convert
-        // uint32_t rgb = (uint32_t) strtol((const char *) &payload[1], NULL, 16);
-        uint32_t rgb = (uint32_t) strtol((const char *) &payload[1], NULL, 16);
-        
-        strip.fill(rgb,0,LED_COUNT-1);
-        strip.show();
-      }
-      break;
+      
+      // Simple Filter Methode
+
+      /*
+        if (payload[0] == '#')
+        {
+          strip.fill(rgb,0,LED_COUNT-1);
+          strip.show();
+        }
+      */
+    }break;
 
     default:
       break;
   }
 }
 
+
+///////////////////////////
+////// Setup
+
 void setup()
 { 
   Serial.begin(115200);
+  
   Serial.println("\nStart ESP8266_WebSocketServer on " + String(ARDUINO_BOARD));
 
   for (uint8_t t = 4; t > 0; t--)
@@ -159,14 +185,25 @@ void setup()
   strip.begin();
 
 
-
-
-
   
 }
 
 ///////////////////////////
-/// Standart Funktion
+/// Check Wifi Connection
+
+void check_status()
+{
+  static unsigned long checkstatus_timeout = 0;
+
+  //KH
+#define HEARTBEAT_INTERVAL    20000L
+  // Print hearbeat every HEARTBEAT_INTERVAL (20) seconds.
+  if ((millis() > checkstatus_timeout) || (checkstatus_timeout == 0))
+  {
+    heartBeatPrint();
+    checkstatus_timeout = millis() + HEARTBEAT_INTERVAL;
+  }
+}
 
 void heartBeatPrint(void)
 {
@@ -188,19 +225,7 @@ void heartBeatPrint(void)
   }
 }
 
-void check_status()
-{
-  static unsigned long checkstatus_timeout = 0;
-
-  //KH
-#define HEARTBEAT_INTERVAL    20000L
-  // Print hearbeat every HEARTBEAT_INTERVAL (20) seconds.
-  if ((millis() > checkstatus_timeout) || (checkstatus_timeout == 0))
-  {
-    heartBeatPrint();
-    checkstatus_timeout = millis() + HEARTBEAT_INTERVAL;
-  }
-}
+//////////////////////////////////////////////////////
 
 
 ///////////////////////////
@@ -212,3 +237,13 @@ void loop()
   webSocket.loop();
   server.handleClient();
 }
+
+///////////////////////////
+///JSON DATA Nest
+/*
+  // Add an array.
+  //
+  JsonArray data = doc.createNestedArray("data");
+  data.add(48.756080);
+  data.add(2.302038);
+*/
