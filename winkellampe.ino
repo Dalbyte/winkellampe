@@ -82,10 +82,14 @@
       Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
       // Farbwerte
-      int Rot = 0;
-      int Gruen = 0;
-      int Blau = 0;
-      int Weis = 0;
+      int Rot = 10;
+      int Gruen = 80;
+      int Blau = 50;
+      int Weis = 100;
+
+      // RGB vs RGBW
+      //float ColorStepMap[4] = {0,0,0,0};
+      float ColorStepMap[3] = {0,0,0};
 
       // RGB vs RGBW
       // uint32_t AktiveFarbe = strip.Color(0,0,0,0);
@@ -148,9 +152,11 @@ Adafruit_MPU6050 mpu;
       float AverageX = 0;
       float AverageY = 0;
       float AverageZ = 0;
-      int AverageRange = 10;
+      int AverageRange = 10; // Zeitspanne
       long timer = 0;
-      int WinkelInputLatenz = 10;
+      int WinkelInputLatenz = 10; //in ms
+
+      int WinkelMax = 90; // WinkelMax ist die Schrägste zulässige Position
 
 ////////////////////////////////////////////////////////////////////////////////
 // WLAN Setup
@@ -289,6 +295,7 @@ void loop()
   // Setup > MPU6050
   MPU6050SensorUpdate2();
   // MPU6050SensorPrint();
+  winklelampe();
 }
 
 
@@ -311,7 +318,8 @@ void check_status()
 }
 
 void heartBeatPrint(void)
-{
+{ 
+  /*
   static int num = 1;
 
   if (WiFi.status() == WL_CONNECTED)
@@ -328,6 +336,7 @@ void heartBeatPrint(void)
   {
     Serial.print(" ");
   }
+  */
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -359,7 +368,7 @@ void ws_rx(uint8_t * payload){
   // Serial.println(AktiveFarbe);
 
   // Show JSON Data GRB
-  serializeJsonPretty(SocketDataJSON, Serial);
+  //serializeJsonPretty(SocketDataJSON, Serial);
   //serializeJson(SocketDataJSON, Serial); // unformatiert
 
   strip.fill(AktiveFarbe, 0, LED_COUNT);
@@ -660,14 +669,123 @@ float ColorMap(int offset,int channelluma){
 
 }
 
-int AngularMap(float Winkel){
-    
-    int WinkelMax = 90; // WinkelMax ist die Schrägste Position, danach muss ein 
 
 
+
+float AngularMap(int LumaMax,float angle){
+  float StepLuma = (float) LumaMax / (float) LED_COUNT;
+  float w;
+
+  if(angle < 0){
+    w = angle * (float) -1;
+  }else
+  {
+    w = angle;
+  }
+  //AngularMapPrint(w);
+
+  return map(w, 0, WinkelMax,StepLuma,0);
 }
 
+void AngularMapPrint(float w){
+  
+  Serial.print("Winkle:");
+  Serial.print(w);
+  //Serial.print(",");
+  Serial.print(",");
+  Serial.print("-90");
+  Serial.print(",");
+  Serial.print("90");
+  Serial.println("");
+}
+
+void setColorSteps(){
+  ColorStepMap[0] = AngularMap(Rot,angleX);
+  ColorStepMap[1] = AngularMap(Gruen,angleX);
+  ColorStepMap[2] = AngularMap(Blau,angleX);
+  //ColorStepMap[3] = AngularMap(Weis,angleX);
+}
+
+void setColorStepsPrint(){
+  /*
+  Serial.print("90");
+  Serial.print(",");
+  Serial.print(ColorStepMap[0]);
+  Serial.print(",");
+  */
+  Serial.print(ColorStepMap[1]);
+  Serial.print(",");
+  /*
+  Serial.print(ColorStepMap[2]);
+  Serial.print(",");
+  Serial.print(angleX);
+  Serial.print(",");
+  Serial.print("-90");
+  */
+  Serial.println("");
+}
+
+int run = 3;
+int r = 0;
+
+void winklelampe(){
+
+  if(r <= run){
+    //r++;
+  setColorSteps();
+  setColorStepsPrint();
+
+  for(int i=0;i<LED_COUNT;i++){
+      float PixelColorStep[0];
+
+      // RGB a=3 vs RGBW a=4
+      for (int a = 0; a < 3; a++){
+        PixelColorStep[a] = ColorStepMap[a]*i;
+      }
+      //strip.setPixelColor(i, Rot-PixelColorStep[0], Gruen-PixelColorStep[1], Blau-PixelColorStep[2], Weis-PixelColorStep[3]);
+      strip.setPixelColor(i,strip.Color(Rot-PixelColorStep[0],Gruen-PixelColorStep[1],Blau-PixelColorStep[2]));
+      PixelFarbePrint((int)Rot-(int)PixelColorStep[0],(int)Gruen-(int)PixelColorStep[1],(int)Blau-(int)PixelColorStep[2]);
+    }
+    strip.show();
+  }
+    
+}
+
+void PixelFarbePrint(float a,float b,float c){
+        /*
+        Serial.print("RotGrenze:");
+        Serial.print(10);
+        Serial.print(",");
+
+        Serial.print("Rot:");
+        Serial.print(a);
+        Serial.print(",");
+        
+        Serial.print("GrünGrenze:");
+        Serial.print(80);
+        Serial.print(",");
+        */
+        Serial.print("Grün:");
+        Serial.print(b);
+        /*
+        Serial.print(",");
+        Serial.print("BlauGrenze:");
+        Serial.print(50);
+        Serial.print(",");
+        Serial.print("Blau:");
+        Serial.print(c);
+        */
+        Serial.println("");
+}
+
+/*
+      // Farbwerte
+      int Rot = 10;
+      int Gruen = 80;
+      int Blau = 50;
+      int Weis = 100;
+*/
 
 
 // send message to client
-            //webSocket.sendTXT(num, "Connected");
+//webSocket.sendTXT(num, "Connected");
